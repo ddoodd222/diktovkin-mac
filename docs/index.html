@@ -874,9 +874,6 @@ const ICO={
   avax:_coin('#E84142','<path fill="#fff" d="M12.75 7.3c.5-.87 1.45-.87 1.95 0l3.8 6.6c.5.87.05 1.6-1 1.6h-1.75c-.55 0-.98-.27-1.2-.68l-2.6-4.55c-.3-.53-.3-1.15 0-1.7l.8-1.27z"/><path fill="#fff" d="M9 12.85c.5-.87 1.45-.87 1.9 0l1.65 2.85c.48.87.03 1.6-1 1.6H8.05c-1.02 0-1.47-.73-.98-1.6L9 12.85z"/>'),
 };
 const DONATE = {
-  platformName: 'Boosty',
-  platformUrl : 'ВСТАВЬТЕ_ССЫЛКУ',           /* ← ссылка на страницу доната. Пусто = кнопка скрыта */
-  platformSub : 'карта · СБП · подписка',
   crypto: [
     { name:'Bitcoin',   net:'BTC',    icon:ICO.btc,  addr:'bc1qvzuw988uzyh8k3pzy8gzduhc3cn4g6lvusj9w0' },
     { name:'Ethereum',  net:'ERC-20', icon:ICO.eth,  addr:'0x1727c960db92Dc4711ff1a7e8f082D89A3e2D4dA' },
@@ -942,11 +939,6 @@ const HERO_TEXT='Сегодня нужно закончить макет гла�
 function copyText(t){try{navigator.clipboard.writeText(t);}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');}catch(_){}a.remove();}}
 function buildDonate(){
   const box=$('#donateOpts');box.innerHTML='';let hasCrypto=false;
-  if(DONATE.platformUrl&&!/ВСТАВ|ВАШ_/.test(DONATE.platformUrl)){
-    const a=document.createElement('a');a.className='dopt';a.href=DONATE.platformUrl;a.target='_blank';a.rel='noopener';
-    a.innerHTML=`<span class="dic">₽</span><span class="dtx"><span class="dt">Поддержать на ${DONATE.platformName}</span><span class="ds">${DONATE.platformSub||''}</span></span><span class="darr">↗</span>`;
-    box.appendChild(a);
-  }
   (DONATE.crypto||[]).filter(c=>c.addr&&!/ВСТАВ|ВАШ_/.test(c.addr)).forEach(c=>{hasCrypto=true;
     const btn=document.createElement('button');btn.className='dopt';btn.type='button';
     const short=c.addr.length>20?c.addr.slice(0,10)+'…'+c.addr.slice(-6):c.addr;
