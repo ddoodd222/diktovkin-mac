@@ -4,7 +4,7 @@
 
 Распознавание идёт на компьютере через whisper.cpp на Metal. Звук никуда не уходит.
 
-**[Скачать для macOS](https://github.com/ddoodd222/diktovkin-mac/releases/latest/download/Diktovkin.dmg)** · бесплатно, macOS 13+, Apple Silicon · модель уже внутри, интернет не нужен
+**[Скачать для macOS](https://github.com/ddoodd222/diktovkin-mac/releases/latest/download/Diktovkin.dmg)** · [о программе](https://ddoodd222.github.io/diktovkin-mac/) · бесплатно, macOS 13+, Apple Silicon · модель уже внутри, интернет не нужен
 
 ## Что умеет
 - **Горячая клавиша** (по умолчанию ⌃⌥Пробел): первое нажатие включает запись, второе останавливает. Текст встаёт в то окно, которое было активным.
