@@ -97,7 +97,7 @@ enum Sounds {
 let languages = [("ru", "Русский"), ("en", "Английский"), ("auto", "Определять сам")]
 
 /// Страница доната. Пусто — пункт «Поддержать проект» в меню не показываем.
-let donateLink = ""
+let donateLink = "https://ddoodd222.github.io/diktovkin-mac/#donate"
 
 // MARK: - Горячая клавиша
 

@@ -24,9 +24,11 @@ struct Model {
     }
 
     static let all = [
-        Model(id: "small-q5_1", title: "small сжатая", note: "190 МБ · почти как small", bytes: 190_085_487),
-        Model(id: "small",      title: "small",        note: "488 МБ · чуть точнее",     bytes: 487_601_967),
-        Model(id: "medium",     title: "medium",       note: "1,5 ГБ · точнее всех",     bytes: 1_533_763_059),
+        Model(id: "small-q5_1", title: "small сжатая", note: "190 МБ · в комплекте",       bytes: 190_085_487),
+        Model(id: "small",      title: "small",        note: "488 МБ · чуть точнее",       bytes: 487_601_967),
+        Model(id: "large-v3-turbo-q5_0", title: "turbo сжатая", note: "574 МБ · точнее medium", bytes: 574_041_195),
+        Model(id: "medium",     title: "medium",       note: "1,5 ГБ · точнее, но медленнее", bytes: 1_533_763_059),
+        Model(id: "large-v3-turbo", title: "turbo",    note: "1,6 ГБ · точнее всех",       bytes: 1_624_555_275),
     ]
 
     /// Что предлагать, если человек ничего не выбирал: сначала то, что лежит внутри.
