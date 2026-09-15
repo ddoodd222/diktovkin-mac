@@ -10,7 +10,7 @@ INSTALL=1
 APP_NAME="Диктовкин"
 BUNDLE_ID="ru.tokarev.diktovkin"
 EXE="Diktovkin"
-VERSION="1.0"
+VERSION="1.1"
 WHISPER_TAG="v1.8.2"
 TARGET="arm64-apple-macosx13.0"
 
@@ -118,6 +118,7 @@ cat > "$OUT/Contents/Info.plist" <<PLIST
 </dict></plist>
 PLIST
 [ -f Resources/AppIcon.icns ] && cp Resources/AppIcon.icns "$OUT/Contents/Resources/AppIcon.icns"
+cp Resources/start.aiff Resources/stop.aiff "$OUT/Contents/Resources/"
 # Модель внутрь бандла: тогда установщик самодостаточен и на первом запуске сеть не нужна.
 for m in models/ggml-*.bin(N); do
   echo "   вшиваю ${m:t} ($(du -h "$m" | cut -f1))"

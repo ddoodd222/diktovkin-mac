@@ -12,6 +12,8 @@ final class Recorder {
 
     private(set) var isRecording = false
     private(set) var startedAt = Date()
+    /// Громкость последнего куска, 0…1 — для точки у курсора.
+    private(set) var level: Float = 0
 
     var seconds: TimeInterval { isRecording ? Date().timeIntervalSince(startedAt) : 0 }
     var duration: TimeInterval { Double(samples.count) / Recorder.rate }
@@ -65,6 +67,7 @@ final class Recorder {
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         isRecording = false
+        level = 0
         lock.lock(); let out = samples; lock.unlock()
         return out
     }
@@ -87,6 +90,11 @@ final class Recorder {
         }
         guard err == nil, out.frameLength > 0, let data = out.floatChannelData?[0] else { return }
         let chunk = Array(UnsafeBufferPointer(start: data, count: Int(out.frameLength)))
+        var sum: Float = 0
+        for v in chunk { sum += v * v }
+        let rms = (sum / Float(max(1, chunk.count))).squareRoot()
+        // Вверх скачком, вниз плавно: так точка дышит, а не мигает.
+        level = max(min(1, rms * 8), level * 0.75)
         lock.lock()
         if Double(samples.count) / Recorder.rate < Recorder.limit { samples.append(contentsOf: chunk) }
         lock.unlock()

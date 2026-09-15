@@ -48,6 +48,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         menu.delegate = self
         statusItem.menu = menu
 
+        Indicator.shared.state = { [weak self] in
+            guard let self else { return (.listening, "", 0) }
+            if self.state == .thinking { return (.thinking, self.percent(Whisper.shared.progress), 0) }
+            return (.listening, self.clock(self.recorder.seconds), self.recorder.level)
+        }
         HotkeyCenter.shared.onPress = { [weak self] in self?.hotkeyPressed() }
         HotkeyCenter.shared.apply(hotkeyPresets[Settings.hotkeyIndex])
         Downloader.shared.onChange = { [weak self] in self?.refresh() }
@@ -91,7 +96,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         // Пока человек говорит, модель успевает подняться в память.
         Whisper.shared.preload(Settings.model)
         Whisper.shared.onProgress = { [weak self] in self?.refresh() }
-        play("Tink")
+        Sounds.play(Settings.soundStart)
+        Indicator.shared.show()
         ticker = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             guard let self else { return }
             if self.recorder.seconds > Recorder.limit { self.stopRecording() } else { self.refresh() }
@@ -104,7 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let samples = recorder.stop()
         stoppedAt = Date()
         state = .thinking
-        play("Pop")
+        Sounds.play(Settings.soundStop)
         refresh()
 
         Whisper.shared.transcribe(samples, model: Settings.model, language: Settings.language) { [weak self] text, error in
@@ -135,14 +141,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         if let stoppedAt, success { lastLatency = Date().timeIntervalSince(stoppedAt) }
         if !success { NSSound.beep() }
         state = .idle
+        Indicator.shared.hide()
         ticker?.invalidate()
         ticker = nil
         refresh()
-    }
-
-    private func play(_ name: String) {
-        guard Settings.sound else { return }
-        NSSound(named: name)?.play()
     }
 
     // MARK: - Строка меню
@@ -207,7 +209,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             item(name, on: Settings.language == code, action: #selector(setLanguage(_:)), object: code)
         }))
 
-        menu.addItem(item("Звук при записи", on: Settings.sound, action: #selector(toggleSound), object: nil))
+        menu.addItem(submenu("Звук начала", items: soundItems(Settings.soundStart, #selector(setStartSound(_:)))))
+        menu.addItem(submenu("Звук конца", items: soundItems(Settings.soundStop, #selector(setStopSound(_:)))))
+        menu.addItem(item("Плашка у каретки", on: Settings.showIndicator,
+                          action: #selector(toggleIndicator), object: nil))
         menu.addItem(.separator())
 
         menu.addItem(item("Запускать при входе", on: SMAppService.mainApp.status == .enabled,
@@ -277,7 +282,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Settings.language = sender.representedObject as? String ?? "ru"
     }
 
-    @objc private func toggleSound() { Settings.sound.toggle() }
+    /// Тишина, системные звуки, свой файл. Свой остается в списке отдельной строкой.
+    private func soundItems(_ current: String, _ action: Selector) -> [NSMenuItem] {
+        let own = Sounds.own + (action == #selector(setStartSound(_:)) ? "start" : "stop")
+        var items = [item("Диктовкин", on: current == own, action: action, object: own)]
+        items.append(item("Без звука", on: current.isEmpty, action: action, object: ""))
+        items.append(.separator())
+        for name in Sounds.system {
+            items.append(item(name, on: current == name, action: action, object: name))
+        }
+        items.append(.separator())
+        if current.hasPrefix("/") {
+            items.append(item(Sounds.title(current), on: true, action: action, object: current))
+        }
+        items.append(item("Выбрать свой файл…", on: false, action: action, object: "pick"))
+        return items
+    }
+
+    @objc private func setStartSound(_ sender: NSMenuItem) {
+        guard let spec = pickedSpec(sender, name: "start") else { return }
+        Settings.soundStart = spec
+        Sounds.play(spec)
+    }
+
+    @objc private func setStopSound(_ sender: NSMenuItem) {
+        guard let spec = pickedSpec(sender, name: "stop") else { return }
+        Settings.soundStop = spec
+        Sounds.play(spec)
+    }
+
+    private func pickedSpec(_ sender: NSMenuItem, name: String) -> String? {
+        guard let spec = sender.representedObject as? String else { return nil }
+        return spec == "pick" ? Sounds.pick(as: name) : spec
+    }
+
+    @objc private func toggleIndicator() {
+        Settings.showIndicator.toggle()
+        if !Settings.showIndicator { Indicator.shared.hide() }
+        else if state != .idle { Indicator.shared.show() }
+    }
 
     @objc private func toggleLogin() {
         let service = SMAppService.mainApp
