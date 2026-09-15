@@ -52,7 +52,7 @@ final class Indicator {
         w.backgroundColor = .clear
         w.hasShadow = true
         w.ignoresMouseEvents = true          // курсор проходит насквозь
-        w.level = .screenSaver               // поверх полноэкранных окон
+        w.level = .popUpMenu                 // выше обычных окон, но без замашек заставки
         w.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]
         let v = IndicatorView(frame: NSRect(origin: .zero, size: size))
         w.contentView = v
