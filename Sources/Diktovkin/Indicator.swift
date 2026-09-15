@@ -16,7 +16,7 @@ final class Indicator {
     private var draw: Timer?
     private var monitor: Any?
 
-    private let size = NSSize(width: 74, height: 24)
+    private var size = NSSize(width: 58, height: 22)
 
     func show() {
         guard Settings.showIndicator else { return }
@@ -66,6 +66,14 @@ final class Indicator {
         view.text = s.text
         view.level = s.level
         view.needsDisplay = true
+        // Ширина по надписи: иначе справа остается пустое поле.
+        let want = view.preferredWidth
+        if abs(want - size.width) > 0.5, let window {
+            size.width = want
+            window.setContentSize(size)
+            view.frame = NSRect(origin: .zero, size: size)
+            place()
+        }
     }
 
     /// Плашка идет справа снизу от курсора и не вылезает за край экрана.
@@ -84,9 +92,18 @@ final class Indicator {
 
 /// Рисует капсулу в стиле иконки: заливка, черная обводка, точка и подпись.
 private final class IndicatorView: NSView {
+    static let font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .bold)
+    private static let padLeft: CGFloat = 8, dotSlot: CGFloat = 8, gap: CGFloat = 6, padRight: CGFloat = 10
+
     var look: Indicator.Look = .listening
     var text = "0:00"
     var level: Float = 0
+
+    var preferredWidth: CGFloat {
+        let w = NSAttributedString(string: text, attributes: [.font: IndicatorView.font]).size().width
+        return (IndicatorView.padLeft + IndicatorView.dotSlot + IndicatorView.gap + w
+                + IndicatorView.padRight).rounded()
+    }
 
     private let green = NSColor(srgbRed: 0.42, green: 0.91, blue: 0.20, alpha: 1)
     private let pink = NSColor(srgbRed: 1.00, green: 0.18, blue: 0.56, alpha: 1)
@@ -97,18 +114,19 @@ private final class IndicatorView: NSView {
         (look == .listening ? green : pink).setFill()
         pill.fill()
         NSColor.black.setStroke()
-        pill.lineWidth = 3
+        pill.lineWidth = 2.5
         pill.stroke()
 
         // Точка слева дышит в такт голосу: сразу видно, что микрофон слышит.
-        let grow = CGFloat(min(1, max(0, level))) * 3
-        let dot = 3 + (look == .listening ? grow : 0)
-        let c = NSPoint(x: r.minX + 11, y: r.midY)
+        let grow = CGFloat(min(1, max(0, level))) * 2.5
+        let dot = 2.8 + (look == .listening ? grow : 0)
+        let c = NSPoint(x: IndicatorView.padLeft + IndicatorView.dotSlot / 2, y: r.midY)
         NSColor.black.setFill()
         NSBezierPath(ovalIn: NSRect(x: c.x - dot, y: c.y - dot, width: dot * 2, height: dot * 2)).fill()
 
-        let font = NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .bold)
-        let s = NSAttributedString(string: text, attributes: [.font: font, .foregroundColor: NSColor.black])
-        s.draw(at: NSPoint(x: c.x + 10, y: r.midY - s.size().height / 2))
+        let s = NSAttributedString(string: text,
+                                   attributes: [.font: IndicatorView.font, .foregroundColor: NSColor.black])
+        s.draw(at: NSPoint(x: IndicatorView.padLeft + IndicatorView.dotSlot + IndicatorView.gap,
+                           y: r.midY - s.size().height / 2))
     }
 }

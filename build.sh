@@ -10,7 +10,7 @@ INSTALL=1
 APP_NAME="Диктовкин"
 BUNDLE_ID="ru.tokarev.diktovkin"
 EXE="Diktovkin"
-VERSION="1.2"
+VERSION="1.3"
 WHISPER_TAG="v1.8.2"
 TARGET="arm64-apple-macosx13.0"
 
