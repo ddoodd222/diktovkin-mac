@@ -1,6 +1,7 @@
 import AppKit
 
-/// Плашка у мерцающей каретки: видно, что программа слушает и куда встанет текст.
+/// Плашка у курсора мыши: видно, что программа слушает, даже когда строка меню далеко.
+/// Держится всегда в одном месте относительно курсора — так понятнее, чем прыгать за кареткой.
 /// Окно сквозное для мыши и фокус не забирает.
 final class Indicator {
     enum Look { case listening, thinking }
@@ -13,32 +14,34 @@ final class Indicator {
     private var window: NSWindow?
     private var view: IndicatorView?
     private var draw: Timer?
-    private var track: Timer?
-    private var anchor: NSRect?          // последняя найденная каретка
+    private var monitor: Any?
 
     private let size = NSSize(width: 74, height: 24)
 
     func show() {
         guard Settings.showIndicator else { return }
         if window == nil { build() }
-        anchor = Indicator.caretRect()
         refresh()
         place()
         window?.orderFrontRegardless()
+
         draw?.invalidate()
-        draw = Timer.scheduledTimer(withTimeInterval: 0.08, repeats: true) { [weak self] _ in self?.refresh() }
-        // Каретку опрашиваем реже: это запрос в чужое приложение, он не бесплатный.
-        track?.invalidate()
-        track = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            if let r = Indicator.caretRect() { self.anchor = r }
-            self.place()
+        draw = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            self?.refresh()
+            self?.place()
+        }
+        // Движение ловим событием, а не опросом: плашка едет без задержки.
+        if monitor == nil {
+            monitor = NSEvent.addGlobalMonitorForEvents(
+                matching: [.mouseMoved, .leftMouseDragged, .rightMouseDragged]
+            ) { [weak self] _ in self?.place() }
         }
     }
 
     func hide() {
         draw?.invalidate(); draw = nil
-        track?.invalidate(); track = nil
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
         window?.orderOut(nil)
     }
 
@@ -65,64 +68,17 @@ final class Indicator {
         view.needsDisplay = true
     }
 
-    /// Встаем под кареткой. Не нашли ее — идем к мыши, чтобы плашка не пропадала совсем.
+    /// Плашка идет справа снизу от курсора и не вылезает за край экрана.
     private func place() {
         guard let window else { return }
-        let caret = anchor ?? NSRect(origin: NSEvent.mouseLocation, size: .zero)
-        var o = NSPoint(x: caret.minX, y: caret.minY - size.height - 6)
-        guard let visible = NSScreen.screens.first(where: { $0.frame.contains(caret.origin) })?.visibleFrame
-                ?? NSScreen.main?.visibleFrame else { window.setFrameOrigin(o); return }
-        if o.y < visible.minY + 4 { o.y = caret.maxY + 6 }      // у нижнего края уходим над кареткой
-        o.x = min(max(visible.minX + 4, o.x), visible.maxX - size.width - 4)
-        o.y = min(max(visible.minY + 4, o.y), visible.maxY - size.height - 4)
-        window.setFrameOrigin(o)
-    }
-
-    // MARK: - Где сейчас каретка
-
-    /// Прямоугольник каретки в координатах экрана. nil — приложение не отдает.
-    private static func caretRect() -> NSRect? {
-        let system = AXUIElementCreateSystemWide()
-        AXUIElementSetMessagingTimeout(system, 0.2)
-        var focused: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(system, kAXFocusedUIElementAttribute as CFString, &focused) == .success,
-              let f = focused else { return nil }
-        let element = f as! AXUIElement
-        AXUIElementSetMessagingTimeout(element, 0.2)
-
-        var rangeRef: CFTypeRef?
-        if AXUIElementCopyAttributeValue(element, kAXSelectedTextRangeAttribute as CFString, &rangeRef) == .success,
-           let range = rangeRef {
-            var boundsRef: CFTypeRef?
-            if AXUIElementCopyParameterizedAttributeValue(
-                element, kAXBoundsForRangeParameterizedAttribute as CFString, range, &boundsRef) == .success,
-               let b = boundsRef {
-                var r = CGRect.zero
-                if AXValueGetValue(b as! AXValue, .cgRect, &r), r.height > 1 { return flip(r) }
-            }
+        let p = NSEvent.mouseLocation
+        var o = NSPoint(x: p.x + 16, y: p.y - size.height - 8)
+        if let visible = NSScreen.screens.first(where: { $0.frame.contains(p) })?.visibleFrame {
+            if o.y < visible.minY + 4 { o.y = p.y + 14 }       // у нижнего края уходим над курсором
+            o.x = min(max(visible.minX + 4, o.x), visible.maxX - size.width - 4)
+            o.y = min(max(visible.minY + 4, o.y), visible.maxY - size.height - 4)
         }
-        return elementRect(element)
-    }
-
-    /// Запасной вариант: левый нижний угол самого поля ввода.
-    private static func elementRect(_ element: AXUIElement) -> NSRect? {
-        var posRef: CFTypeRef?
-        var sizeRef: CFTypeRef?
-        guard AXUIElementCopyAttributeValue(element, kAXPositionAttribute as CFString, &posRef) == .success,
-              AXUIElementCopyAttributeValue(element, kAXSizeAttribute as CFString, &sizeRef) == .success,
-              let p = posRef, let s = sizeRef else { return nil }
-        var origin = CGPoint.zero
-        var box = CGSize.zero
-        guard AXValueGetValue(p as! AXValue, .cgPoint, &origin),
-              AXValueGetValue(s as! AXValue, .cgSize, &box), box.height > 1 else { return nil }
-        return flip(CGRect(origin: origin, size: box))
-    }
-
-    /// Универсальный доступ считает от верха главного экрана, AppKit — от низа.
-    private static func flip(_ r: CGRect) -> NSRect {
-        let primary = NSScreen.screens.first?.frame ?? .zero
-        return NSRect(x: r.origin.x, y: primary.maxY - r.origin.y - r.height,
-                      width: r.width, height: r.height)
+        window.setFrameOrigin(o)
     }
 }
 

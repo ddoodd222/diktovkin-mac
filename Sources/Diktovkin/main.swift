@@ -211,7 +211,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         menu.addItem(submenu("Звук начала", items: soundItems(Settings.soundStart, #selector(setStartSound(_:)))))
         menu.addItem(submenu("Звук конца", items: soundItems(Settings.soundStop, #selector(setStopSound(_:)))))
-        menu.addItem(item("Плашка у каретки", on: Settings.showIndicator,
+        menu.addItem(item("Плашка у курсора", on: Settings.showIndicator,
                           action: #selector(toggleIndicator), object: nil))
         menu.addItem(.separator())
 
